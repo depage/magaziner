@@ -1,6 +1,13 @@
 import { defineConfig } from 'vite';
+import dts from 'vite-plugin-sass-dts';
 
 export default defineConfig({
+  plugins: [dts({
+    outDir: 'dist',
+    rollupTypes: true,
+    tsconfigPath: 'jsconfig.json',
+    include: ['src'],
+  })],
   build: {
     lib: {
       entry: 'src/magaziner.js',
@@ -10,5 +17,6 @@ export default defineConfig({
     },
     outDir: 'dist',
     emptyOutDir: true,
+    cssCodeSplit: false,
   },
 });

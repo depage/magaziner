@@ -887,6 +887,8 @@ class MagazineNavigator {
     // }}}
 }
 
+import './magaziner.scss';
+
 export { MagazineNavigator };
 
 // vim:set ft=javascript sw=4 sts=4 fdm=marker :
