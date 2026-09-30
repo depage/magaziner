@@ -3,6 +3,7 @@
   "module": "src/magaziner.js",
   "type": "module",
   "scripts": {
+    "test": "bun test",
     "build": "bunx --bun vite build",
     "watch": "bunx --bun vite build --watch --config ./vite.config.js",
     "dev": "bunx --bun vite"

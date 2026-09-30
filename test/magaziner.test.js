@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach, spyOn } from 'bun:test';
-import { MagazineNavigator } from '../depage-magaziner.js';
+import { MagazineNavigator } from '../src/magaziner.js';
 
 function createMockContainer(options = {}) {
     const container = document.createElement('div');
