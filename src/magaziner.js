@@ -613,6 +613,8 @@ class MagazineNavigator {
 
     // {{{ _attachPage
     _attachPage(page) {
+        if (!page) return;
+
         page.__magaziner = page.__magaziner || {}
 
         if (page.__magaziner.attached) return;
