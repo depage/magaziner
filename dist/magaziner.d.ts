@@ -4,6 +4,7 @@ export interface MagazineOptions {
     threshold: number;
     keyboardNavigation: boolean;
     touchNavigation: boolean;
+    wrapAround: boolean;
 }
 export interface PageData {
     contentHtml: string;

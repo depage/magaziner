@@ -6,7 +6,8 @@ var MagazineNavigator = class MagazineNavigator {
 			preloadPageTimeout: 1e3,
 			threshold: 30,
 			keyboardNavigation: true,
-			touchNavigation: true
+			touchNavigation: true,
+			wrapAround: false
 		};
 	}
 	static {
@@ -195,8 +196,27 @@ var MagazineNavigator = class MagazineNavigator {
 			const threshold = options.threshold || 30;
 			if (Math.abs(dx) > threshold) this._moving = true;
 			if (!this._moving) return;
-			if (dx > 0 && (this.currentPage === 0 || !this._prevEnabled)) dx = 0;
-			else if (dx < 0 && (this.currentPage >= this._urlsByPages.length || !this._nextEnabled)) dx = 0;
+			if (this.options.wrapAround && this._nextEnabled) {
+				if (dx < 0 && this.currentPage === this._urlsByPages.length - 1) {
+					this._removePage(this._nextPage);
+					this._nextPage = this._getNewPage();
+					const nextUrl = this._urlsByPages[0];
+					if (typeof nextUrl !== "undefined") this._preloadPage(this._nextPage, nextUrl);
+				}
+			}
+			if (this.options.wrapAround && this._prevEnabled) {
+				if (dx > 0 && this.currentPage === 0) {
+					this._removePage(this._prevPage);
+					this._prevPage = this._getNewPage();
+					const prevUrl = this._urlsByPages[this._urlsByPages.length - 1];
+					if (typeof prevUrl !== "undefined") this._preloadPage(this._prevPage, prevUrl);
+				}
+			}
+			if (dx > 0 && (this.currentPage === 0 || !this._prevEnabled)) {
+				if (!this.options.wrapAround) dx = 0;
+			} else if (dx < 0 && (this.currentPage >= this._urlsByPages.length || !this._nextEnabled)) {
+				if (!this.options.wrapAround) dx = 0;
+			}
 			this._scrollY = window.scrollY;
 			this._offsetPages(dx);
 		}, { passive: true });
@@ -582,11 +602,17 @@ var MagazineNavigator = class MagazineNavigator {
 		if (this.currentPage < this._urlsByPages.length - 1 && this._nextEnabled) {
 			this.show(this.currentPage + 1);
 			MagazineNavigator._dispatchEvent(this._container, "next");
+		} else if (this.options.wrapAround && this._nextEnabled) {
+			this.show(0);
+			MagazineNavigator._dispatchEvent(this._container, "next");
 		} else this._offsetPages(0);
 	}
 	prev() {
 		if (this.currentPage > 0 && this._prevEnabled) {
 			this.show(this.currentPage - 1);
+			MagazineNavigator._dispatchEvent(this._container, "prev");
+		} else if (this.options.wrapAround && this._prevEnabled) {
+			this.show(this._urlsByPages.length - 1);
 			MagazineNavigator._dispatchEvent(this._container, "prev");
 		} else this._offsetPages(0);
 	}

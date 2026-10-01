@@ -18,6 +18,7 @@ export interface MagazineOptions {
     threshold: number;
     keyboardNavigation: boolean;
     touchNavigation: boolean;
+    wrapAround: boolean;
 }
 
 export interface PageData {
@@ -49,7 +50,8 @@ class MagazineNavigator {
         preloadPageTimeout: 1000,
         threshold: 30,
         keyboardNavigation: true,
-        touchNavigation: true
+        touchNavigation: true,
+        wrapAround: false
     };
 
     static readonly _hasTouch = 'ontouchstart' in window || ('maxTouchPoints' in navigator && (navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints > 0);
@@ -339,10 +341,34 @@ class MagazineNavigator {
 
             if (!this._moving) return;
 
+            if (this.options.wrapAround && this._nextEnabled) {
+                if (dx < 0 && this.currentPage === this._urlsByPages.length - 1) {
+                    this._removePage(this._nextPage);
+                    this._nextPage = this._getNewPage();
+                    const nextUrl = this._urlsByPages[0];
+                    if (typeof nextUrl !== 'undefined') {
+                        this._preloadPage(this._nextPage, nextUrl);
+                    }
+                }
+            }
+            if (this.options.wrapAround && this._prevEnabled) {
+                if (dx > 0 && this.currentPage === 0) {
+                    this._removePage(this._prevPage);
+                    this._prevPage = this._getNewPage();
+                    const prevUrl = this._urlsByPages[this._urlsByPages.length - 1];
+                    if (typeof prevUrl !== 'undefined') {
+                        this._preloadPage(this._prevPage, prevUrl);
+                    }
+                }
+            }
             if (dx > 0 && (this.currentPage === 0 || !this._prevEnabled)) {
-                dx = 0;
+                if (!this.options.wrapAround) {
+                    dx = 0;
+                }
             } else if (dx < 0 && (this.currentPage >= this._urlsByPages.length || !this._nextEnabled)) {
-                dx = 0;
+                if (!this.options.wrapAround) {
+                    dx = 0;
+                }
             }
 
             this._scrollY = window.scrollY;
@@ -878,6 +904,9 @@ class MagazineNavigator {
         if (this.currentPage < this._urlsByPages.length - 1 && this._nextEnabled) {
             this.show(this.currentPage + 1);
             MagazineNavigator._dispatchEvent(this._container, 'next');
+        } else if (this.options.wrapAround && this._nextEnabled) {
+            this.show(0);
+            MagazineNavigator._dispatchEvent(this._container, 'next');
         } else {
             this._offsetPages(0);
         }
@@ -888,6 +917,9 @@ class MagazineNavigator {
     prev(): void {
         if (this.currentPage > 0 && this._prevEnabled) {
             this.show(this.currentPage - 1);
+            MagazineNavigator._dispatchEvent(this._container, 'prev');
+        } else if (this.options.wrapAround && this._prevEnabled) {
+            this.show(this._urlsByPages.length - 1);
             MagazineNavigator._dispatchEvent(this._container, 'prev');
         } else {
             this._offsetPages(0);
