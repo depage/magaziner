@@ -410,11 +410,17 @@ class MagazineNavigator {
 
             if (!this._moving) return;
 
-            if (this.options.wrapAround) {
-                // allow movement
-            } else if (dx > 0 && (this.currentPage === 0 || !this._prevEnabled)) {
+            if (dx > 0 && !this._prevEnabled) {
+                // no going back
                 dx = 0;
-            } else if (dx < 0 && (this.currentPage >= (this._urlsByPages.length - 1) || !this._nextEnabled)) {
+            } else if (dx < 0 && !this._nextEnabled) {
+                // no going forward
+                dx = 0;
+            } else if (dx > 0 && !this.options.wrapAround && this.currentPage === 0) {
+                // first page
+                dx = 0;
+            } else if (dx < 0 && !this.options.wrapAround && this.currentPage >= (this._urlsByPages.length - 1)) {
+                // last page
                 dx = 0;
             }
 

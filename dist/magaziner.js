@@ -1,4 +1,7 @@
 //#region src/magaziner.ts
+/**
+* This class adds magazine-like side-to-side page navigation to a website.
+*/
 var MagazineNavigator = class MagazineNavigator {
 	static {
 		this.defaultOptions = {
@@ -19,16 +22,37 @@ var MagazineNavigator = class MagazineNavigator {
 	static {
 		this._downloadExtRegexp = /\.(pdf|zip|m4v|mp4|mp3|jpg|jpeg|png|webp|docx|pptx)$/i;
 	}
+	/**
+	* This function returns the root URL from the base tag or window location.
+	*
+	* @param container Optional container element.
+	* @returns string
+	*/
 	static _getRootUrl(container) {
 		const baseUrl = document.querySelector("head base")?.getAttribute("href") || false;
 		if (baseUrl && typeof baseUrl === "string" && baseUrl.charAt(baseUrl.length - 1) !== "/") return baseUrl + "/";
 		return baseUrl && typeof baseUrl === "string" ? baseUrl : window.location.origin + "/";
 	}
+	/**
+	* This function checks if a URL is internal (not a download or external link).
+	*
+	* @param url The URL to check.
+	* @param rootUrl The root URL.
+	* @returns boolean
+	*/
 	static _isInternalUrl(url, rootUrl) {
 		if (this._downloadExtRegexp.test(url)) return false;
 		const normalizedRoot = rootUrl;
 		return url.substring(0, normalizedRoot.length) === normalizedRoot || url.indexOf(":") === -1;
 	}
+	/**
+	* This function converts a relative URL to an absolute URL.
+	*
+	* @param rootUrl The root URL or null.
+	* @param base The base URL.
+	* @param relative The relative URL.
+	* @returns string
+	*/
 	static _makeAbsolute(rootUrl, base, relative) {
 		if (typeof relative === "undefined") return relative;
 		if (relative && relative.match(/^(https?:\/\/|\/|data:|mailto:|tel:|call:)/)) return relative;
@@ -43,6 +67,13 @@ var MagazineNavigator = class MagazineNavigator {
 		}
 		return stack.join("/");
 	}
+	/**
+	* This function parses HTML string and extracts page content, metadata, and links.
+	*
+	* @param htmlString The HTML string to parse.
+	* @param rootUrl The root URL for making links absolute.
+	* @returns PageData
+	*/
 	static _parsePageContent(htmlString, rootUrl) {
 		const doc = new DOMParser().parseFromString(htmlString, "text/html");
 		const body = doc.querySelector("body") || doc.body;
@@ -83,10 +114,23 @@ var MagazineNavigator = class MagazineNavigator {
 			body
 		};
 	}
+	/**
+	* This function creates an HTMLElement or DocumentFragment from an HTML string.
+	*
+	* @param htmlString The HTML string.
+	* @returns HTMLElement or DocumentFragment
+	*/
 	static _createNode(htmlString) {
 		const fragment = document.createRange().createContextualFragment(htmlString);
 		return fragment.children[0] || fragment;
 	}
+	/**
+	* This function dispatches a custom event on the container.
+	*
+	* @param container The HTMLElement to dispatch the event on.
+	* @param eventName The event name.
+	* @param detail Optional event detail.
+	*/
 	static _dispatchEvent(container, eventName, detail) {
 		container.dispatchEvent(new CustomEvent(`depage-magaziner:${eventName}`, {
 			detail: detail || {},
@@ -94,6 +138,17 @@ var MagazineNavigator = class MagazineNavigator {
 			cancelable: true
 		}));
 	}
+	/**
+	* This function initializes the MagazineNavigator with a container and page links.
+	* The page link selector is just to add a specific page order with previous and next
+	* pages. Usually one would use this selector to match links in the main navigation or sidebar.
+	* All internal links would be loaded with magaziner (independent of this selector), 
+	* if not specifically excluded with the "no-ajax" class:
+	*
+	* @param container The container element.
+	* @param pagelinkSelector CSS selector for page links.
+	* @param options Optional configuration overrides.
+	*/
 	constructor(container, pagelinkSelector, options) {
 		if (!("PointerEvent" in window)) {
 			console.warn("[@depage/magaziner] Pointer Events not supported. Magaziner navigation disabled.");
@@ -133,6 +188,9 @@ var MagazineNavigator = class MagazineNavigator {
 			this._schedulePagePreload();
 		}, 50);
 	}
+	/**
+	* This function scans the document for page links and builds the page index.
+	*/
 	_initPageLinks() {
 		const pagelinks = document.querySelectorAll(this._pagelinkSelector);
 		this._pagesByUrl = {};
@@ -150,6 +208,9 @@ var MagazineNavigator = class MagazineNavigator {
 		if (typeof this._pagesByUrl[currentLocation] === "undefined") this.currentPage = -1;
 		else this.currentPage = this._pagesByUrl[currentLocation];
 	}
+	/**
+	* This function registers a click handler on the document to intercept page link clicks.
+	*/
 	_registerLinkClicks() {
 		document.addEventListener("click", (e) => {
 			const target = e.target.closest("a[href]");
@@ -168,6 +229,9 @@ var MagazineNavigator = class MagazineNavigator {
 			e.preventDefault();
 		});
 	}
+	/**
+	* This function registers all navigation event handlers.
+	*/
 	_registerEvents() {
 		if (this.options.touchNavigation) this._registerPointerEvents();
 		if (this.options.keyboardNavigation) this._registerKeyboardEvents();
@@ -176,6 +240,9 @@ var MagazineNavigator = class MagazineNavigator {
 		this._registerStateChangeCompleteEvent();
 		this._registerLinkClicks();
 	}
+	/**
+	* This function registers touch/mouse pointer events for swiping navigation.
+	*/
 	_registerPointerEvents() {
 		const container = this._container;
 		const options = this.options;
@@ -197,8 +264,10 @@ var MagazineNavigator = class MagazineNavigator {
 			const threshold = options.threshold || 30;
 			if (Math.abs(dx) > threshold) this._moving = true;
 			if (!this._moving) return;
-			if (this.options.wrapAround) {} else if (dx > 0 && (this.currentPage === 0 || !this._prevEnabled)) dx = 0;
-			else if (dx < 0 && (this.currentPage >= this._urlsByPages.length - 1 || !this._nextEnabled)) dx = 0;
+			if (dx > 0 && !this._prevEnabled) dx = 0;
+			else if (dx < 0 && !this._nextEnabled) dx = 0;
+			else if (dx > 0 && !this.options.wrapAround && this.currentPage === 0) dx = 0;
+			else if (dx < 0 && !this.options.wrapAround && this.currentPage >= this._urlsByPages.length - 1) dx = 0;
 			this._scrollY = window.scrollY;
 			this._offsetPages(dx);
 		}, { passive: true });
@@ -228,10 +297,18 @@ var MagazineNavigator = class MagazineNavigator {
 			this.enable();
 		}, { passive: true });
 	}
+	/**
+	* This function checks if the user has selected any text.
+	*
+	* @returns boolean
+	*/
 	_hasTextSelected() {
 		const selection = window.getSelection();
 		return !!(selection && selection.toString().length > 0);
 	}
+	/**
+	* This function registers keyboard event handlers for arrow key navigation.
+	*/
 	_registerKeyboardEvents() {
 		document.addEventListener("keydown", (e) => {
 			if (document.activeElement?.matches("input, textarea, select")) return;
@@ -251,6 +328,9 @@ var MagazineNavigator = class MagazineNavigator {
 			}
 		});
 	}
+	/**
+	* This function registers a debounced resize handler to update page width.
+	*/
 	_registerResizeEvent() {
 		const timer = setTimeout(() => {}, 0);
 		const bound = (() => {
@@ -262,6 +342,9 @@ var MagazineNavigator = class MagazineNavigator {
 		}).bind(this);
 		window.addEventListener("resize", bound);
 	}
+	/**
+	* This function registers a browser back/forward (popstate) event handler.
+	*/
 	_registerPopStateEvent() {
 		const self = this;
 		window.addEventListener("popstate", () => {
@@ -274,6 +357,9 @@ var MagazineNavigator = class MagazineNavigator {
 			});
 		});
 	}
+	/**
+	* This function registers a handler for state change completion to update page metadata.
+	*/
 	_registerStateChangeCompleteEvent() {
 		const container = this._container;
 		const handler = (e) => {
@@ -343,6 +429,12 @@ var MagazineNavigator = class MagazineNavigator {
 		};
 		container.addEventListener("depage-magaziner:statechangecomplete", handler);
 	}
+	/**
+	* This function triggers the statechangecomplete event and resets focus.
+	*
+	* @param url The current URL.
+	* @param page The HTML element representing the page.
+	*/
 	_triggerShowLoaded(url, page) {
 		if (url === window.location.href) {
 			MagazineNavigator._dispatchEvent(this._container, "statechangecomplete", {
@@ -352,12 +444,21 @@ var MagazineNavigator = class MagazineNavigator {
 			this._resetFocus();
 		}
 	}
+	/**
+	* This function returns a page element by its page number.
+	*
+	* @param n The page number.
+	* @returns HtmlElementWithMagaziner or null.
+	*/
 	_getPageByNumber(n) {
 		if (n === this.currentPage) return this._currentPage;
 		if (n === this.currentPage - 1) return this._prevPage;
 		if (n === this.currentPage + 1) return this._nextPage;
 		return null;
 	}
+	/**
+	* This function schedules preloading of adjacent pages.
+	*/
 	_schedulePagePreload() {
 		if (this.options.preloadPageTimeout < 0) return;
 		const numPages = this._urlsByPages.length;
@@ -372,6 +473,12 @@ var MagazineNavigator = class MagazineNavigator {
 			}
 		}, this.options.preloadPageTimeout);
 	}
+	/**
+	* This function preloads a page by its page number.
+	*
+	* @param n The page number.
+	* @param wrapHint Optional hint for wrap-around behavior.
+	*/
 	_preloadPageByNumber(n, wrapHint) {
 		if (n < 0 || n >= this._urlsByPages.length) return;
 		const url = this._urlsByPages[n];
@@ -387,6 +494,12 @@ var MagazineNavigator = class MagazineNavigator {
 			else if (n === numPages - 1 && this.currentPage === 0 && this._prevPage) this._preloadPage(this._prevPage, url);
 		}
 	}
+	/**
+	* This function fetches and preloads a page by its URL.
+	*
+	* @param page The HTML element representing the page.
+	* @param url The URL to fetch.
+	*/
 	_preloadPage(page, url) {
 		if (!page) return;
 		page.__magaziner = page.__magaziner || {};
@@ -450,6 +563,11 @@ var MagazineNavigator = class MagazineNavigator {
 			if (finalUrl === document.location.href) document.location.href = finalUrl;
 		});
 	}
+	/**
+	* This function creates a new empty page element.
+	*
+	* @returns HtmlElementWithMagaziner
+	*/
 	_getNewPage() {
 		const page = MagazineNavigator._createNode(this._pageHtml);
 		page.__magaziner = {};
@@ -458,6 +576,11 @@ var MagazineNavigator = class MagazineNavigator {
 		page.__magaziner.attached = false;
 		return page;
 	}
+	/**
+	* This function attaches a page element to the container.
+	*
+	* @param page The HTML element representing the page.
+	*/
 	_attachPage(page) {
 		if (!page) return;
 		page.__magaziner = page.__magaziner || {};
@@ -466,6 +589,11 @@ var MagazineNavigator = class MagazineNavigator {
 		this._container.appendChild(page);
 		MagazineNavigator._dispatchEvent(this._container, "attached", { page });
 	}
+	/**
+	* This function detaches a page element from the container.
+	*
+	* @param page The HTML element representing the page.
+	*/
 	_detachPage(page) {
 		page.__magaziner = page.__magaziner || {};
 		if (!page.__magaziner.attached) return;
@@ -473,11 +601,22 @@ var MagazineNavigator = class MagazineNavigator {
 		if (page.parentNode === this._container) this._container.removeChild(page);
 		MagazineNavigator._dispatchEvent(this._container, "detached", { page });
 	}
+	/**
+	* This function removes a page element from the container and dispatches a removed event.
+	*
+	* @param page The HTML element representing the page.
+	*/
 	_removePage(page) {
 		if (!page) return;
 		MagazineNavigator._dispatchEvent(this._container, "removed", { page });
 		if (page.parentNode) page.remove();
 	}
+	/**
+	* This function offsets pages horizontally during navigation transitions.
+	*
+	* @param x The horizontal offset in pixels.
+	* @param adjustYOffset Whether to adjust the vertical offset.
+	*/
 	_offsetPages(x, adjustYOffset) {
 		this._attachPage(this._currentPage);
 		if (x > 0) this._attachPage(this._prevPage);
@@ -490,18 +629,45 @@ var MagazineNavigator = class MagazineNavigator {
 		this._setPageOffset(this._currentPage, x, 0);
 		this._setPageOffset(this._nextPage, 1 * this._pageWidth + x, this._scrollY, adjustYOffset);
 	}
+	/**
+	* This function sets the horizontal and vertical offset of a page element.
+	*
+	* @param page The HTML element representing the page, or null.
+	* @param x The horizontal offset in pixels.
+	* @param y The vertical offset in pixels.
+	* @param adjustYOffset Whether to apply the vertical offset.
+	*/
 	_setPageOffset(page, x, y, adjustYOffset) {
 		if (!page) return;
 		if (typeof adjustYOffset === "undefined") adjustYOffset = true;
 		this._setPageXOffset(page, x);
 		if (adjustYOffset) this._setPageYOffset(page, y);
 	}
+	/**
+	* This function sets the CSS horizontal offset variable of a page element.
+	*
+	* @param page The HTML element representing the page.
+	* @param x The horizontal offset in pixels.
+	*/
 	_setPageXOffset(page, x) {
 		page.style.setProperty("--pageTranslateX", x + "px");
 	}
+	/**
+	* This function sets the CSS vertical offset variable of a page element.
+	*
+	* @param page The HTML element representing the page.
+	* @param y The vertical offset in pixels.
+	*/
 	_setPageYOffset(page, y) {
 		page.style.setProperty("--pageTranslateY", y + "px");
 	}
+	/**
+	* This function shows a page by its page number with optional animation.
+	*
+	* @param n The page number.
+	* @param animated Whether to animate the transition.
+	* @param hash Optional hash fragment to scroll to.
+	*/
 	show(n, animated = true, hash = "") {
 		if (!this.options.touchNavigation && !this.options.keyboardNavigation) animated = false;
 		const isNewPage = this.currentPage !== n;
@@ -587,6 +753,11 @@ var MagazineNavigator = class MagazineNavigator {
 			this._resetFocus(target);
 		}
 	}
+	/**
+	* This function loads a new page by URL, clearing existing pages.
+	*
+	* @param url The URL to load.
+	*/
 	load(url) {
 		this._removePage(this._prevPage);
 		this._removePage(this._currentPage);
@@ -603,6 +774,9 @@ var MagazineNavigator = class MagazineNavigator {
 			this._preloadPage(this._currentPage, url);
 		}, 50);
 	}
+	/**
+	* This function navigates to the next page.
+	*/
 	next() {
 		if (this.currentPage < this._urlsByPages.length - 1 && this._nextEnabled) {
 			this.show(this.currentPage + 1);
@@ -612,6 +786,9 @@ var MagazineNavigator = class MagazineNavigator {
 			MagazineNavigator._dispatchEvent(this._container, "next");
 		} else this._offsetPages(0);
 	}
+	/**
+	* This function navigates to the previous page.
+	*/
 	prev() {
 		if (this.currentPage > 0 && this._prevEnabled) {
 			this.show(this.currentPage - 1);
@@ -621,26 +798,49 @@ var MagazineNavigator = class MagazineNavigator {
 			MagazineNavigator._dispatchEvent(this._container, "prev");
 		} else this._offsetPages(0);
 	}
+	/**
+	* This function disables previous page navigation.
+	*/
 	disablePrev() {
 		this._prevEnabled = false;
 	}
+	/**
+	* This function disables next page navigation.
+	*/
 	disableNext() {
 		this._nextEnabled = false;
 	}
+	/**
+	* This function disables all navigation (prev and next).
+	*/
 	disable() {
 		this._prevEnabled = false;
 		this._nextEnabled = false;
 	}
+	/**
+	* This function enables previous page navigation.
+	*/
 	enablePrev() {
 		this._prevEnabled = true;
 	}
+	/**
+	* This function enables next page navigation.
+	*/
 	enableNext() {
 		this._nextEnabled = true;
 	}
+	/**
+	* This function enables all navigation (prev and next).
+	*/
 	enable() {
 		this._prevEnabled = true;
 		this._nextEnabled = true;
 	}
+	/**
+	* This function resets this current focus of the page.
+	*
+	* @param targetElement The element to focus, defaults to document.body.
+	*/
 	_resetFocus(targetElement = document.body) {
 		if (!targetElement) return;
 		const a = document.createElement("a");
