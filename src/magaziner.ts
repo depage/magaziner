@@ -157,7 +157,7 @@ class MagazineNavigator {
     }
     // }}}
 
-    // Instance properties
+    // {{{ Instance properties
     _container!: HTMLElement;
     _pagelinkSelector!: string;
     options!: MagazineOptions;
@@ -180,7 +180,9 @@ class MagazineNavigator {
     _nextEnabled: boolean;
     _pointerStartTime: number;
     _handlingPopState: boolean;
+    // }}}
 
+    // {{{ constructor
     constructor(container: HTMLElement, pagelinkSelector: string, options?: Partial<MagazineOptions>) {
         if (!('PointerEvent' in window)) {
             console.warn('[depage-magaziner] Pointer Events not supported. Magazine navigation disabled.');
@@ -727,14 +729,19 @@ class MagazineNavigator {
         this._setPageXOffset(page, x);
         if (adjustYOffset) this._setPageYOffset(page, y);
     }
+    // }}}
 
+    // {{{ _setPageXOffset
     _setPageXOffset(page: HtmlElementWithMagaziner, x: number): void {
         page.style.setProperty('--pageTranslateX', x + 'px');
     }
+    // }}}
 
+    // {{{ _setPageYOffset
     _setPageYOffset(page: HtmlElementWithMagaziner, y: number): void {
         page.style.setProperty('--pageTranslateY', y + 'px');
     }
+    // }}}
 
     // {{{ show
     show(n: number, animated: boolean = true, hash: string = ''): void {
@@ -787,13 +794,15 @@ class MagazineNavigator {
             const oldCurrentPage = (this._container.querySelector('.current-page')) as HtmlElementWithMagaziner;
             const y = -1 * this._scrollY;
 
-            if (oldCurrentPage) (oldCurrentPage as HtmlElementWithMagaziner).classList.remove('current-page');
-            (this._currentPage as HtmlElementWithMagaziner).classList.add('current-page');
+            if (oldCurrentPage) {
+                oldCurrentPage.classList.remove('current-page');
+
+                this._setPageYOffset(oldCurrentPage, y);
+            }
+            this._currentPage.classList.add('current-page');
 
             window.scrollTo(0, 0);
             this._scrollY = 0;
-
-            this._setPageYOffset(oldCurrentPage, y);
 
             MagazineNavigator._dispatchEvent(this._container, 'hide', { page: oldCurrentPage });
             MagazineNavigator._dispatchEvent(this._container, 'show', { url: this._urlsByPages[n], page: this._currentPage });
@@ -873,6 +882,7 @@ class MagazineNavigator {
             this._offsetPages(0);
         }
     }
+    // }}}
 
     // {{{ prev
     prev(): void {

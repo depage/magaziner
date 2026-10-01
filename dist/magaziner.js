@@ -522,11 +522,13 @@ var MagazineNavigator = class MagazineNavigator {
 			this._scrollY = window.scrollY;
 			const oldCurrentPage = this._container.querySelector(".current-page");
 			const y = -1 * this._scrollY;
-			if (oldCurrentPage) oldCurrentPage.classList.remove("current-page");
+			if (oldCurrentPage) {
+				oldCurrentPage.classList.remove("current-page");
+				this._setPageYOffset(oldCurrentPage, y);
+			}
 			this._currentPage.classList.add("current-page");
 			window.scrollTo(0, 0);
 			this._scrollY = 0;
-			this._setPageYOffset(oldCurrentPage, y);
 			MagazineNavigator._dispatchEvent(this._container, "hide", { page: oldCurrentPage });
 			MagazineNavigator._dispatchEvent(this._container, "show", {
 				url: this._urlsByPages[n],
