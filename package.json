@@ -21,7 +21,8 @@
     "test": "bun test",
     "build": "bunx --bun vite build",
     "watch": "bunx --bun vite build --watch --config ./vite.config.js",
-    "dev": "bunx --bun vite"
+    "dev": "bunx --bun vite --config ./examples/vite.config.js",
+    "build-library": "bunx --bun vite build"
   },
   "publishConfig": {
     "access": "public"

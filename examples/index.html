@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Magaziner - Example</title>
+  <link rel="stylesheet" href="../dist/magaziner.css">
+  <link rel="stylesheet" href="example.scss">
+</head>
+<body>
+  <div id="pagecontainer">
+    <a href="page2.html" data-ajax class="nav-arrow left-arrow">&larr;</a>
+    <a href="page1.html" data-ajax class="nav-arrow right-arrow">&rarr;</a>
+
+    <div class="page current-page">
+      <h1>Welcome to Magaziner</h1>
+      <p>
+        This is a demo of the magazine-style navigation library.
+        You can navigate between pages in multiple ways:
+      </p>
+      <ul>
+        <li><strong>Keyboard:</strong> Use the left and right arrow keys</li>
+        <li><strong>Touch:</strong> Swipe left or right to move between pages</li>
+        <li><strong>Mouse:</strong> Click the arrows or links to navigate</li>
+      </ul>
+    </div>
+
+    <div class="page">
+      <h1>Page 1</h1>
+      <p>
+        This is the content of page one. The navigation library handles
+        page transitions seamlessly, including preloading of adjacent pages.
+      </p>
+    </div>
+  </div>
+
+  <script type="module" src="example.js"></script>
+</body>
+</html>
