@@ -80,12 +80,12 @@ declare class MagazineNavigator {
     _triggerShowLoaded(url: string, page: HtmlElementWithMagaziner): void;
     _getPageByNumber(n: number): HtmlElementWithMagaziner | null;
     _schedulePagePreload(): void;
-    _preloadPageByNumber(n: number): void;
+    _preloadPageByNumber(n: number, wrapHint?: string): void;
     _preloadPage(page: HtmlElementWithMagaziner, url: string): void;
     _getNewPage(): HtmlElementWithMagaziner;
     _attachPage(page: HtmlElementWithMagaziner): void;
     _detachPage(page: HtmlElementWithMagaziner): void;
-    _removePage(page: HtmlElementWithMagaziner): void;
+    _removePage(page?: HtmlElementWithMagaziner): void;
     _offsetPages(x: number, adjustYOffset?: boolean): void;
     _setPageOffset(page: HtmlElementWithMagaziner | null, x: number, y: number, adjustYOffset?: boolean): void;
     _setPageXOffset(page: HtmlElementWithMagaziner, x: number): void;

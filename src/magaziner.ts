@@ -187,7 +187,7 @@ class MagazineNavigator {
     // {{{ constructor
     constructor(container: HTMLElement, pagelinkSelector: string, options?: Partial<MagazineOptions>) {
         if (!('PointerEvent' in window)) {
-            console.warn('[depage-magaziner] Pointer Events not supported. Magazine navigation disabled.');
+            console.warn('[@depage/magaziner] Pointer Events not supported. Magaziner navigation disabled.');
             return;
         }
 
@@ -209,7 +209,7 @@ class MagazineNavigator {
         this._currentPage = null;
         this._prevPage = null as unknown as HtmlElementWithMagaziner;
         this._nextPage = null as unknown as HtmlElementWithMagaziner;
-        this._pageWidth = 0;
+        this._pageWidth = this._container.offsetWidth;
         this._moving = false;
         this._startX = 0;
         this._prevEnabled = true;
@@ -332,6 +332,8 @@ class MagazineNavigator {
 
             if (this._hasTextSelected()) return;
 
+            container.classList.remove('animated');
+
             let dx = e.changedTouches[0].clientX - this._startX;
             const threshold = options.threshold || 30;
 
@@ -341,34 +343,12 @@ class MagazineNavigator {
 
             if (!this._moving) return;
 
-            if (this.options.wrapAround && this._nextEnabled) {
-                if (dx < 0 && this.currentPage === this._urlsByPages.length - 1) {
-                    this._removePage(this._nextPage);
-                    this._nextPage = this._getNewPage();
-                    const nextUrl = this._urlsByPages[0];
-                    if (typeof nextUrl !== 'undefined') {
-                        this._preloadPage(this._nextPage, nextUrl);
-                    }
-                }
-            }
-            if (this.options.wrapAround && this._prevEnabled) {
-                if (dx > 0 && this.currentPage === 0) {
-                    this._removePage(this._prevPage);
-                    this._prevPage = this._getNewPage();
-                    const prevUrl = this._urlsByPages[this._urlsByPages.length - 1];
-                    if (typeof prevUrl !== 'undefined') {
-                        this._preloadPage(this._prevPage, prevUrl);
-                    }
-                }
-            }
-            if (dx > 0 && (this.currentPage === 0 || !this._prevEnabled)) {
-                if (!this.options.wrapAround) {
-                    dx = 0;
-                }
-            } else if (dx < 0 && (this.currentPage >= this._urlsByPages.length || !this._nextEnabled)) {
-                if (!this.options.wrapAround) {
-                    dx = 0;
-                }
+            if (this.options.wrapAround) {
+                // allow movement
+            } else if (dx > 0 && (this.currentPage === 0 || !this._prevEnabled)) {
+                dx = 0;
+            } else if (dx < 0 && (this.currentPage >= (this._urlsByPages.length - 1) || !this._nextEnabled)) {
+                dx = 0;
             }
 
             this._scrollY = window.scrollY;
@@ -380,6 +360,9 @@ class MagazineNavigator {
             if (this._hasTextSelected()) {
                 container.style.userSelect = '';
                 return;
+            }
+            if (this.options.touchNavigation || this.options.keyboardNavigation) {
+                this._container.classList.add('animated');
             }
             container.style.userSelect = '';
             if (this._urlsByPages.length <= 1) {
@@ -585,23 +568,45 @@ class MagazineNavigator {
     _schedulePagePreload(): void {
         if (this.options.preloadPageTimeout < 0) return;
 
+        const numPages = this._urlsByPages.length;
+
         this._preloadPageTimer = setTimeout(() => {
             this._preloadPageByNumber(this.currentPage + 1);
             this._preloadPageTimer = setTimeout(() => {
                 this._preloadPageByNumber(this.currentPage - 1);
-            }, this.options.preloadPageTimeout);
+            }, this.options.preloadPageTimeout * 0.5);
+
+            if (this.options.wrapAround && numPages > 2) {
+                if (this.currentPage === 0) {
+                    this._preloadPageByNumber(numPages - 1, 'wrapAround');
+                } else if (this.currentPage === (numPages - 1)) {
+                    this._preloadPageByNumber(0, 'wrapAround');
+                }
+            }
         }, this.options.preloadPageTimeout);
     }
     // }}}
 
     // {{{ _preloadPageByNumber
-    _preloadPageByNumber(n: number): void {
+    _preloadPageByNumber(n: number, wrapHint?: string): void {
         if (n < 0 || n >= this._urlsByPages.length) return;
         const url = this._urlsByPages[n];
         if (typeof url === 'undefined') return;
 
         const page = this._getPageByNumber(n);
-        if (page) this._preloadPage(page, url);
+        if (page) {
+            this._preloadPage(page, url);
+            return;
+        }
+
+        if (this.options.wrapAround && wrapHint === 'wrapAround') {
+            const numPages = this._urlsByPages.length;
+            if (n === 0 && this.currentPage === (numPages - 1) && this._nextPage) {
+                this._preloadPage(this._nextPage, url);
+            } else if (n === (numPages - 1) && this.currentPage === 0 && this._prevPage) {
+                this._preloadPage(this._prevPage, url);
+            }
+        }
     }
     // }}}
 
@@ -719,25 +724,32 @@ class MagazineNavigator {
         if (!page.__magaziner!.attached) return;
 
         page.__magaziner!.attached = false;
-        this._container.removeChild(page);
+        if (page.parentNode === this._container) {
+            this._container.removeChild(page);
+        }
         MagazineNavigator._dispatchEvent(this._container, 'detached', { page });
     }
     // }}}
 
     // {{{ _removePage
-    _removePage(page: HtmlElementWithMagaziner): void {
+    _removePage(page?: HtmlElementWithMagaziner): void {
+        if (!page) return;
+
         MagazineNavigator._dispatchEvent(this._container, 'removed', { page });
-        if (page && page.parentNode) page.remove();
+
+        if (page.parentNode) page.remove();
     }
     // }}}
 
     // {{{ _offsetPages
     _offsetPages(x: number, adjustYOffset?: boolean): void {
         this._attachPage(this._currentPage);
-        if (x > -1 * this._pageWidth && x !== 0) this._attachPage(this._prevPage);
-        if (x < 1 * this._pageWidth && x !== 0) this._attachPage(this._nextPage);
 
-        if (x === 0 && !this._container.classList.contains('animated')) {
+        if (x > 0) {
+            this._attachPage(this._prevPage);
+        } else if (x < 0) {
+            this._attachPage(this._nextPage);
+        } else if (x === 0 && !this._container.classList.contains('animated')) {
             this._detachPage(this._prevPage);
             this._detachPage(this._nextPage);
         }
@@ -779,32 +791,45 @@ class MagazineNavigator {
         const posDiff = n - this.currentPage;
         const pageWidth = this._container.offsetWidth;
 
+        this._container.classList.toggle('animated', animated);
+
         if (isNewPage) {
             this._pageWidth = pageWidth;
-            if (posDiff > 1 || posDiff < -1) {
+            const numPages = this._urlsByPages.length;
+            if (this.options.wrapAround && posDiff === -(numPages - 1)) {
+                this._removePage(this._prevPage);
+
+                this._prevPage = this._currentPage;
+                this._currentPage = this._nextPage;
+                this._nextPage = this._getNewPage();
+            } else if (this.options.wrapAround && posDiff === (numPages - 1)) {
+                this._removePage(this._nextPage);
+
+                this._nextPage = this._currentPage;
+                this._currentPage = this._prevPage;
+                this._prevPage = this._getNewPage();
+            } else if (posDiff === 1) {
+                this._removePage(this._prevPage);
+
+                this._prevPage = this._currentPage;
+                this._currentPage = this._nextPage;
+                this._nextPage = this._getNewPage();
+            } else if (posDiff === -1) {
+                this._removePage(this._nextPage);
+
+                this._nextPage = this._currentPage;
+                this._currentPage = this._prevPage;
+                this._prevPage = this._getNewPage();
+            } else {
                 this._removePage(this._prevPage);
                 this._removePage(this._currentPage);
                 this._removePage(this._nextPage);
 
                 this._prevPage = this._getNewPage();
+                this._nextPage = this._getNewPage();
                 this._currentPage = this._getNewPage();
-                this._nextPage = this._getNewPage();
-            } else if (posDiff === 1) {
-                this._removePage(this._prevPage);
-                this._prevPage = this._currentPage;
-                this._currentPage = this._nextPage;
-                this._nextPage = this._getNewPage();
-                this._attachPage(this._currentPage);
-            } else if (posDiff === -1) {
-                this._removePage(this._nextPage);
-                this._nextPage = this._currentPage;
-                this._currentPage = this._prevPage;
-                this._prevPage = this._getNewPage();
-                this._attachPage(this._currentPage);
             }
         }
-
-        this._container.classList.toggle('animated', animated);
         this.currentPage = n;
 
         if (isNewPage && !this._handlingPopState && document.location.href.split('#')[0] !== this._urlsByPages[this.currentPage]) {
@@ -841,10 +866,9 @@ class MagazineNavigator {
             }
             self._detachPage(self._prevPage);
             self._detachPage(self._nextPage);
-            self._container.classList.remove('animated');
-            (self._currentPage as HtmlElementWithMagaziner)?.removeEventListener("transitionend", handler);
         };
-        (this._currentPage as HtmlElementWithMagaziner)?.addEventListener("transitionend", handler);
+        this._currentPage.removeEventListener("transitionend", handler);
+        this._currentPage.addEventListener("transitionend", handler);
 
         this._offsetPages(0, false);
 
@@ -882,8 +906,9 @@ class MagazineNavigator {
 
         this._prevPage = this._getNewPage();
         this._currentPage = this._getNewPage();
-        (this._currentPage as HtmlElementWithMagaziner).classList.add('current-page');
         this._nextPage = this._getNewPage();
+
+        this._currentPage.classList.add('current-page');
 
         if (!this._handlingPopState) {
             this._history.pushState(null, null, url);
