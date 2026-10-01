@@ -1,0 +1,45 @@
+#pagecontainer {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+#pagecontainer.animated {
+  overflow-y: hidden;
+}
+#pagecontainer.animated > .page {
+  transition-property: transform;
+  transition-duration: 300ms;
+}
+#pagecontainer > .page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-height: 100%;
+  background: #ffffff;
+  z-index: 1;
+  backface-visibility: hidden;
+  transform: translateX(var(--pageTranslateX));
+  top: var(--pageTranslateY);
+}
+#pagecontainer > .page::before {
+  display: block;
+  content: " ";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0.3rem;
+  z-index: 1000;
+}
+#pagecontainer > .page.loading::before {
+  width: 100%;
+  transition-property: width;
+  transition-duration: 1000ms;
+}
+#pagecontainer > .page.current-page {
+  z-index: 2;
+  position: relative;
+}/*$vite$:1*/

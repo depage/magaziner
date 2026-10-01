@@ -1,8 +1,13 @@
 import { describe, test, expect, beforeEach, afterEach, spyOn } from 'bun:test';
-import { MagazineNavigator } from '../src/magaziner.js';
+import { MagazineNavigator, MagazineOptions } from '../src/magaziner';
 
-function createMockContainer(options = {}) {
-    const container = document.createElement('div');
+interface MockContainerOptions {
+    width?: string;
+    height?: string;
+}
+
+function createMockContainer(options: MockContainerOptions = {}): HTMLDivElement {
+    const container = (document.createElement('div')) as HTMLDivElement;
     container.id = 'pagecontainer';
     container.style.width = (options.width || '800px');
     container.style.height = (options.height || '600px');
@@ -10,28 +15,28 @@ function createMockContainer(options = {}) {
     return container;
 }
 
-function createMockPageLink(container, url, className = '') {
-    const link = document.createElement('a');
+function createMockPageLink(container: HTMLElement, url: string, className: string = ''): HTMLAnchorElement {
+    const link = (document.createElement('a')) as HTMLAnchorElement;
     link.href = url;
     if (className) link.className = className;
     container.appendChild(link);
     return link;
 }
 
-function createMockPage(container, className = 'page current-page') {
-    const page = document.createElement('div');
+function createMockPage(container: HTMLElement, className: string = 'page current-page'): HTMLDivElement {
+    const page = (document.createElement('div')) as HTMLDivElement;
     page.className = className;
     container.appendChild(page);
     return page;
 }
 
 const TEST_ORIGIN = 'http://localhost';
-function localhostUrl(path) {
+function localhostUrl(path: string): string {
     return TEST_ORIGIN + path;
 }
 
 // Set document.location.href to match a page URL (source uses document.location, not globalThis.location)
-function mockDocumentLocation(url) {
+function mockDocumentLocation(url: string): void {
     document.location.href = url;
 }
 
@@ -42,7 +47,7 @@ function mockDocumentLocation(url) {
 // {{{ 'MagazineNavigator - static: _makeAbsolute'
 describe('MagazineNavigator - static: _makeAbsolute', () => {
     test('returns undefined when relative is undefined', () => {
-        expect(MagazineNavigator._makeAbsolute('http://example.com/', 'http://example.com/page', undefined)).toBe(undefined);
+        expect((MagazineNavigator._makeAbsolute as (rootUrl: string | null, base: string, relative?: string) => string | undefined)('http://example.com/', 'http://example.com/page', undefined)).toBe(undefined);
     });
 
     test('passes through absolute http URLs', () => {
@@ -207,7 +212,7 @@ describe('MagazineNavigator - static: _parsePageContent', () => {
         const html = '<html><body><title>Test</title><div class="page"><img src="/img.png"></div></body></html>';
         const result = MagazineNavigator._parsePageContent(html, 'http://example.com/');
         const img = result.body.querySelector('img');
-        expect(img.getAttribute('src')).toBe('/img.png');
+        expect(img?.getAttribute('src')).toBe('/img.png');
     });
 
     test('rewrites src attributes of iframes to absolute URLs', () => {
@@ -215,7 +220,7 @@ describe('MagazineNavigator - static: _parsePageContent', () => {
         const html = '<html><body><title>Test</title><div class="page"><iframe src="/video.mp4"></iframe></div></body></html>';
         const result = MagazineNavigator._parsePageContent(html, 'http://example.com/');
         const iframe = result.body.querySelector('iframe');
-        expect(iframe.getAttribute('src')).toBe('/video.mp4');
+        expect(iframe?.getAttribute('src')).toBe('/video.mp4');
     });
 
     test('extracts contentHtml from .page element or body', () => {
@@ -238,13 +243,13 @@ describe('MagazineNavigator - static: _parsePageContent', () => {
 // {{{ 'MagazineNavigator - static: _createNode'
 describe('MagazineNavigator - static: _createNode', () => {
     test('creates DOM node from HTML string', () => {
-        const node = MagazineNavigator._createNode('<div class="page"></div>');
+        const node = (MagazineNavigator._createNode('<div class="page"></div>')) as HTMLElement;
         expect(node.tagName).toBe('DIV');
         expect(node.classList.contains('page')).toBe(true);
     });
 
     test('returns fragment children[0] when available', () => {
-        const node = MagazineNavigator._createNode('<span>text</span>');
+        const node = (MagazineNavigator._createNode('<span>text</span>')) as HTMLElement;
         expect(node.tagName).toBe('SPAN');
     });
 });
@@ -257,27 +262,27 @@ describe('MagazineNavigator - static: _createNode', () => {
 // {{{ 'MagazineNavigator - static: _dispatchEvent'
 describe('MagazineNavigator - static: _dispatchEvent', () => {
     test('dispatches CustomEvent with correct name format', () => {
-        const container = document.createElement('div');
-        let capturedEvent = null;
-        container.addEventListener('depage-magaziner:test', (e) => {
-            capturedEvent = e;
-        });
+        const container = (document.createElement('div')) as HTMLDivElement;
+        let capturedEvent: CustomEvent | null = null;
+        container.addEventListener('depage-magaziner:test', (e: Event) => {
+            capturedEvent = e as CustomEvent;
+        }, { once: true });
         MagazineNavigator._dispatchEvent(container, 'test', { name: 'detail1', value: 'detail2' });
         expect(capturedEvent).not.toBeNull();
-        expect(capturedEvent.type).toBe('depage-magaziner:test');
-        expect(capturedEvent.detail).toEqual({ name: 'detail1', value: 'detail2' });
-        expect(capturedEvent.bubbles).toBe(true);
-        expect(capturedEvent.cancelable).toBe(true);
+        expect((capturedEvent as CustomEvent).type).toBe('depage-magaziner:test');
+        expect((capturedEvent as CustomEvent).detail).toEqual({ name: 'detail1', value: 'detail2' });
+        expect((capturedEvent as CustomEvent).bubbles).toBe(true);
+        expect((capturedEvent as CustomEvent).cancelable).toBe(true);
     });
 
     test('dispatches with empty detail object when detail is null/undefined', () => {
-        const container = document.createElement('div');
-        let capturedEvent = null;
-        container.addEventListener('depage-magaziner:nope', (e) => {
-            capturedEvent = e;
-        });
-        MagazineNavigator._dispatchEvent(container, 'nope', null);
-        expect(capturedEvent.detail).toEqual({});
+        const container = (document.createElement('div')) as HTMLDivElement;
+        let capturedEvent: CustomEvent | null = null;
+        container.addEventListener('depage-magaziner:nope', (e: Event) => {
+            capturedEvent = e as CustomEvent;
+        }, { once: true });
+        MagazineNavigator._dispatchEvent(container, 'nope', {});
+        expect((capturedEvent as CustomEvent).detail).toEqual({});
     });
 });
 // }}}
@@ -297,7 +302,7 @@ describe('MagazineNavigator - constructor', () => {
     });
 
     test('assigns instance to container.__magaziner', () => {
-        const container = createMockContainer();
+        const container = (createMockContainer() as HTMLDivElement) as HTMLElement & { __magaziner?: MagazineNavigator };
         createMockPageLink(container, localhostUrl('/'));
 
         const navigator = new MagazineNavigator(container, 'a');
@@ -318,7 +323,7 @@ describe('MagazineNavigator - constructor', () => {
 
     test('handles empty href as current page URL', () => {
         const container = createMockContainer();
-        const link = document.createElement('a');
+        const link = (document.createElement('a')) as HTMLAnchorElement;
         link.href = '';
         container.appendChild(link);
 
@@ -349,12 +354,12 @@ describe('MagazineNavigator - constructor', () => {
     });
 
     test('creates _currentPage from .page.current-page element', () => {
-        const container = createMockContainer();
+        const container = (createMockContainer() as HTMLDivElement) as HTMLElement & { __magaziner?: MagazineNavigator };
         createMockPage(container, 'page current-page');
         createMockPageLink(container, localhostUrl('/'));
 
         new MagazineNavigator(container, 'a');
-        expect(container.__magaziner._currentPage).not.toBeNull();
+        expect(container.__magaziner!._currentPage).not.toBeNull();
     });
 });
 // }}}
@@ -451,7 +456,7 @@ describe('MagazineNavigator - show()', () => {
 
         createMockPageLink(container, localhostUrl('/page'));
         const page = createMockPage(container, 'page current-page');
-        const target = document.createElement('div');
+        const target = (document.createElement('div')) as HTMLDivElement;
         target.id = 'section1';
         page.appendChild(target);
 
@@ -700,7 +705,7 @@ describe('MagazineNavigator - options: keyboardNavigation and touchNavigation', 
         const navigator = new MagazineNavigator(container, 'a', {
             keyboardNavigation: false,
             touchNavigation: false
-        });
+        } as Partial<MagazineOptions>);
         expect(navigator.options.keyboardNavigation).toBe(false);
         expect(navigator.options.touchNavigation).toBe(false);
     });
@@ -716,13 +721,13 @@ describe('MagazineNavigator - load() with fetch', () => {
     beforeEach(() => {
         document.body.innerHTML = '';
         // Mock fetch before MagazineNavigator constructor runs
-        globalThis.fetch = () => Promise.resolve(new Response('<html><body><div class="page">content</div></body></html>', {
-            url: localhostUrl('/newpage')
+        (globalThis as unknown as { fetch?: Function }).fetch = () => Promise.resolve(new Response('<html><body><div class="page">content</div></body></html>', {
+            ...(globalThis as { url?: string }).url ? { url: localhostUrl('/newpage') } : {}
         }));
     });
 
     afterEach(() => {
-        globalThis.fetch = undefined;
+        (globalThis as unknown as { fetch?: Function }).fetch = undefined;
     });
 
     test('load() fetches URL and updates page content', async () => {
@@ -816,9 +821,9 @@ describe('MagazineNavigator - _getNewPage', () => {
 
         expect(newPage.tagName).toBe('DIV');
         expect(newPage.__magaziner).toBeDefined();
-        expect(newPage.__magaziner.loaded).toBe(false);
-        expect(newPage.__magaziner.loading).toBe(false);
-        expect(newPage.__magaziner.attached).toBe(false);
+        expect(newPage.__magaziner!.loaded).toBe(false);
+        expect(newPage.__magaziner!.loading).toBe(false);
+        expect(newPage.__magaziner!.attached).toBe(false);
     });
 });
 // }}}
@@ -849,7 +854,7 @@ describe('MagazineNavigator - link click interception', () => {
         const showSpy = spyOn(navigator, 'show');
 
         const links = container.querySelectorAll('a');
-        links[1].dispatchEvent(new PointerEvent('click', { bubbles: true }));
+        (links[1] as HTMLAnchorElement).dispatchEvent(new PointerEvent('click', { bubbles: true }));
 
         expect(showSpy).toHaveBeenCalledWith(1, true, '');
     });
@@ -865,7 +870,7 @@ describe('MagazineNavigator - link click interception', () => {
         const showSpy = spyOn(navigator, 'show');
 
         const link = container.querySelector('a');
-        link.dispatchEvent(new PointerEvent('click', { bubbles: true }));
+        (link as HTMLAnchorElement).dispatchEvent(new PointerEvent('click', { bubbles: true }));
 
         expect(showSpy).toHaveBeenCalledWith(0, true, '');
     });
@@ -880,15 +885,15 @@ describe('MagazineNavigator - link click interception', () => {
 
         const pushStateSpy = spyOn(history, 'pushState');
 
-        const unknownLink = document.createElement('a');
+        const unknownLink = (document.createElement('a')) as HTMLAnchorElement;
         unknownLink.href = localhostUrl('/unknown');
         document.body.appendChild(unknownLink);
 
-        const beforeCalls = pushStateSpy.mock?.calls?.length || 0;
+        const beforeCalls = (pushStateSpy.mock?.calls?.length) || 0;
 
         unknownLink.dispatchEvent(new PointerEvent('click', { bubbles: true }));
 
-        const afterCalls = pushStateSpy.mock?.calls?.length || 0;
+        const afterCalls = (pushStateSpy.mock?.calls?.length) || 0;
         expect(afterCalls).toBeGreaterThan(beforeCalls);
         const lastCall = pushStateSpy.mock.calls[afterCalls - 1];
         expect(lastCall[2]).toBe(localhostUrl('/unknown'));
@@ -922,16 +927,16 @@ describe('MagazineNavigator - link click interception', () => {
 
         new MagazineNavigator(container, 'a');
 
-        const beforeCalls = pushStateSpy.mock?.calls?.length || 0;
+        const beforeCalls = (pushStateSpy.mock?.calls?.length) || 0;
 
-        const externalLink = document.createElement('a');
+        const externalLink = (document.createElement('a')) as HTMLAnchorElement;
         externalLink.href = 'https://external.com/page';
         document.body.appendChild(externalLink);
 
         externalLink.dispatchEvent(new PointerEvent('click', { bubbles: true }));
 
         // pushState should not be called for external URLs
-        const afterCalls = pushStateSpy.mock?.calls?.length || 0;
+        const afterCalls = (pushStateSpy.mock?.calls?.length) || 0;
         expect(afterCalls).toBe(beforeCalls);
     });
 
@@ -946,10 +951,10 @@ describe('MagazineNavigator - link click interception', () => {
 
         new MagazineNavigator(container, 'a');
 
-        const beforeCalls = pushStateSpy.mock?.calls?.length || 0;
+        const beforeCalls = (pushStateSpy.mock?.calls?.length) || 0;
 
         // Add a link dynamically outside the container
-        const dynamicLink = document.createElement('a');
+        const dynamicLink = (document.createElement('a')) as HTMLAnchorElement;
         dynamicLink.href = localhostUrl('/dynamic');
         document.body.appendChild(dynamicLink);
 
@@ -966,18 +971,18 @@ describe('MagazineNavigator - link click interception', () => {
         mockDocumentLocation(localhostUrl('/page1'));
 
         const link = createMockPageLink(container, localhostUrl('/page2'));
-        const innerSpan = document.createElement('span');
+        const innerSpan = (document.createElement('span')) as HTMLSpanElement;
         innerSpan.textContent = 'Click me';
         link.appendChild(innerSpan);
         createMockPage(container, 'page current-page');
 
         const pushStateSpy = spyOn(history, 'pushState');
 
-        const beforeCalls = pushStateSpy.mock?.calls?.length || 0;
+        const beforeCalls = (pushStateSpy.mock?.calls?.length) || 0;
 
         innerSpan.dispatchEvent(new PointerEvent('click', { bubbles: true }));
 
-        const afterCalls = pushStateSpy.mock?.calls?.length || 0;
+        const afterCalls = (pushStateSpy.mock?.calls?.length) || 0;
         expect(afterCalls).toBeGreaterThan(beforeCalls);
     });
 
@@ -1002,7 +1007,7 @@ describe('MagazineNavigator - link click interception', () => {
         const container = createMockContainer({ width: '800px' });
         mockDocumentLocation(localhostUrl('/page1'));
 
-        const link = document.createElement('a');
+        const link = (document.createElement('a')) as HTMLAnchorElement;
         link.href = localhostUrl('/page2') + '#section';
         document.body.appendChild(link);
         createMockPageLink(container, localhostUrl('/page1'));
@@ -1010,7 +1015,7 @@ describe('MagazineNavigator - link click interception', () => {
 
         const pushStateSpy = spyOn(history, 'pushState');
 
-        const beforeCalls = pushStateSpy.mock?.calls?.length || 0;
+        const beforeCalls = (pushStateSpy.mock?.calls?.length) || 0;
 
         new MagazineNavigator(container, 'a');
 
@@ -1023,4 +1028,4 @@ describe('MagazineNavigator - link click interception', () => {
 });
 // }}}
 
-// vim:set ft=javascript sw=4 sts=4 fdm=marker :
+// vim:set ft=typescript sw=4 sts=4 fdm=marker :
