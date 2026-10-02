@@ -1,9 +1,14 @@
 {
   "name": "@depage/magaziner",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Frank Hellenkamp <jonas@depage.net> (https://depage.net)",
   "description": "Magazine-style website navigation with page swiping",
   "license": "MIT",
+  "homepage": "https://github.com/depage/magaziner",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/depage/magaziner.git"
+  },
   "module": "src/magaziner.js",
   "type": "module",
   "main": "dist/magaziner.js",
