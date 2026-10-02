@@ -706,6 +706,7 @@ var MagazineNavigator = class MagazineNavigator {
 				this._currentPage = this._getNewPage();
 			}
 		}
+		if (!this._currentPage) this._currentPage = this._getNewPage();
 		this.currentPage = n;
 		if (isNewPage && !this._handlingPopState && document.location.href.split("#")[0] !== this._urlsByPages[this.currentPage]) this._history.pushState(null, null, this._urlsByPages[this.currentPage]);
 		this._preloadPageByNumber(n);

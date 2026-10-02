@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach, spyOn } from 'bun:test';
 import { MagazineNavigator, MagazineOptions } from '../src/magaziner';
+import { setupFetchMock, resetFetchMock } from './happydom';
 
 interface MockContainerOptions {
     width?: string;
@@ -720,14 +721,8 @@ describe('MagazineNavigator - options: keyboardNavigation and touchNavigation', 
 describe('MagazineNavigator - load() with fetch', () => {
     beforeEach(() => {
         document.body.innerHTML = '';
-        // Mock fetch before MagazineNavigator constructor runs
-        (globalThis as unknown as { fetch?: Function }).fetch = () => Promise.resolve(new Response('<html><body><div class="page">content</div></body></html>', {
-            ...(globalThis as { url?: string }).url ? { url: localhostUrl('/newpage') } : {}
-        }));
-    });
-
-    afterEach(() => {
-        (globalThis as unknown as { fetch?: Function }).fetch = undefined;
+        resetFetchMock();
+        setupFetchMock().for(localhostUrl('/newpage')).html('<html><body><div class="page">content</div></body></html>');
     });
 
     test('load() fetches URL and updates page content', async () => {
