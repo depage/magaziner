@@ -1,6 +1,7 @@
 {
   "name": "@depage/magaziner",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "author": "Frank Hellenkamp <jonas@depage.net> (https://depage.net)",
   "description": "Magazine-style website navigation with page swiping",
   "module": "src/magaziner.js",
   "type": "module",
