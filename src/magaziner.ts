@@ -333,6 +333,7 @@ class MagazineNavigator {
             const target = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null;
             if (!target) return;
             if (target.classList.contains('no-ajaxy')) return;
+            if (target.hasAttribute('download')) return;
             const href = target.getAttribute('href');
             if (typeof href === 'undefined') return;
             if (!MagazineNavigator._isInternalUrl(href, this._rootUrl)) return;

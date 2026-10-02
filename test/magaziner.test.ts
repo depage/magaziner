@@ -911,6 +911,26 @@ describe('MagazineNavigator - link click interception', () => {
         expect(loadSpy).not.toHaveBeenCalled();
     });
 
+    test('clicking a link with download attribute is ignored', () => {
+        const container = createMockContainer({ width: '800px' });
+        mockDocumentLocation(localhostUrl('/page1'));
+
+        const link = (document.createElement('a')) as HTMLAnchorElement;
+        link.href = localhostUrl('/page2');
+        link.setAttribute('download', '');
+        container.appendChild(link);
+        createMockPage(container, 'page current-page');
+
+        const navigator = new MagazineNavigator(container, 'a');
+        const showSpy = spyOn(navigator, 'show');
+        const loadSpy = spyOn(navigator, 'load');
+
+        link.dispatchEvent(new PointerEvent('click', { bubbles: true }));
+
+        expect(showSpy).not.toHaveBeenCalled();
+        expect(loadSpy).not.toHaveBeenCalled();
+    });
+
     test('clicking a link with external URL is ignored', () => {
         const container = createMockContainer({ width: '800px' });
         mockDocumentLocation(localhostUrl('/page1'));
