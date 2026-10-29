@@ -824,6 +824,146 @@ describe('MagazineNavigator - _getNewPage', () => {
 // }}}
 
 // ============================================================
+// _hasActiveFocusInContainer / _resetFocus guard tests
+// ============================================================
+
+// {{{ 'MagazineNavigator - _resetFocus focus guard'
+describe('MagazineNavigator - _resetFocus focus guard', () => {
+    let container: HTMLDivElement;
+    let page: HTMLDivElement;
+    let navigator: MagazineNavigator;
+
+    beforeEach(() => {
+        document.body.innerHTML = '';
+        container = createMockContainer();
+        createMockPageLink(container, localhostUrl('/'));
+        page = createMockPage(container, 'page current-page');
+        navigator = new MagazineNavigator(container, 'a');
+    });
+
+    afterEach(() => {
+        document.body.innerHTML = '';
+    });
+
+    test('_hasActiveFocusInContainer returns false when nothing is focused (body)', () => {
+        expect(document.activeElement).toBe(document.body);
+        expect(navigator._hasActiveFocusInContainer()).toBe(false);
+    });
+
+    test('_hasActiveFocusInContainer returns false when focus is outside the container', () => {
+        const outside = (document.createElement('button')) as HTMLButtonElement;
+        document.body.appendChild(outside);
+        outside.focus();
+
+        expect(navigator._hasActiveFocusInContainer()).toBe(false);
+    });
+
+    test('_hasActiveFocusInContainer returns true when focus is inside a page', () => {
+        const input = (document.createElement('input')) as HTMLInputElement;
+        page.appendChild(input);
+        input.focus();
+
+        expect(navigator._hasActiveFocusInContainer()).toBe(true);
+    });
+
+    test('_resetFocus does nothing when there is no focused element inside the pages', () => {
+        const outside = (document.createElement('button')) as HTMLButtonElement;
+        document.body.appendChild(outside);
+        outside.focus();
+
+        const target = (document.createElement('div')) as HTMLDivElement;
+        document.body.appendChild(target);
+        const prependSpy = spyOn(target, 'prepend');
+
+        navigator._resetFocus(target);
+
+        expect(prependSpy).not.toHaveBeenCalled();
+    });
+
+    test('_resetFocus resets focus when the focused element lies inside the pages', () => {
+        const input = (document.createElement('input')) as HTMLInputElement;
+        page.appendChild(input);
+        input.focus();
+
+        const target = (document.createElement('div')) as HTMLDivElement;
+        document.body.appendChild(target);
+        const prependSpy = spyOn(target, 'prepend');
+
+        navigator._resetFocus(target);
+
+        expect(prependSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('_resetFocus moves the focus back to the body when it resets', () => {
+        const input = (document.createElement('input')) as HTMLInputElement;
+        page.appendChild(input);
+        input.focus();
+        expect(document.activeElement).toBe(input);
+
+        navigator._resetFocus();
+
+        expect(document.activeElement).toBe(document.body);
+    });
+
+    test('_resetFocus with force resets focus even when focus is outside the pages (hash navigation)', () => {
+        const outside = (document.createElement('button')) as HTMLButtonElement;
+        document.body.appendChild(outside);
+        outside.focus();
+
+        const target = (document.createElement('div')) as HTMLDivElement;
+        document.body.appendChild(target);
+        const prependSpy = spyOn(target, 'prepend');
+
+        navigator._resetFocus(target, true);
+
+        expect(prependSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('_resetFocus with force resets focus even when nothing is focused (hash navigation)', () => {
+        expect(document.activeElement).toBe(document.body);
+
+        const target = (document.createElement('div')) as HTMLDivElement;
+        document.body.appendChild(target);
+        const prependSpy = spyOn(target, 'prepend');
+
+        navigator._resetFocus(target, true);
+
+        expect(prependSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('_resetFocus does nothing when targetElement is null', () => {
+        const input = (document.createElement('input')) as HTMLInputElement;
+        page.appendChild(input);
+        input.focus();
+
+        expect(() => navigator._resetFocus(null, true)).not.toThrow();
+    });
+
+    test('_triggerShowLoaded resets focus when the focus is inside the pages', () => {
+        const input = (document.createElement('input')) as HTMLInputElement;
+        page.appendChild(input);
+        input.focus();
+        expect(document.activeElement).toBe(input);
+
+        navigator._triggerShowLoaded(window.location.href, page);
+
+        expect(document.activeElement).toBe(document.body);
+    });
+
+    test('_triggerShowLoaded keeps the focus when the focus is outside the pages', () => {
+        const outside = (document.createElement('button')) as HTMLButtonElement;
+        document.body.appendChild(outside);
+        outside.focus();
+        expect(document.activeElement).toBe(outside);
+
+        navigator._triggerShowLoaded(window.location.href, page);
+
+        expect(document.activeElement).toBe(outside);
+    });
+});
+// }}}
+
+// ============================================================
 // Link click interception tests (_registerLinkClicks)
 // ============================================================
 
