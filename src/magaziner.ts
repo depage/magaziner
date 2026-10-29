@@ -1068,7 +1068,7 @@ class MagazineNavigator {
             } else {
                 window.scrollTo(scrollOptions.left, scrollOptions.top);
             }
-            this._resetFocus(target);
+            this._resetFocus(target, true);
         }
     }
     // }}}
@@ -1194,14 +1194,42 @@ class MagazineNavigator {
     }
     // }}}
 
+    // {{{ _hasActiveFocusInContainer
+    /**
+     * This function checks whether there is an element with the active focus
+     * inside of the pages of this container.
+     *
+     * As the container only contains pages, it is enough to check whether the
+     * actively focused element lies inside of the container itself.
+     *
+     * @returns boolean
+     */
+    _hasActiveFocusInContainer(): boolean {
+        const activeElement = document.activeElement;
+
+        if (!activeElement) return false;
+
+        return this._container.contains(activeElement);
+    }
+    // }}}
+
     // {{{ _resetFocus
     /**
      * This function resets this current focus of the page.
      *
+     * It only resets the focus, when there currently is an element with the
+     * active focus inside of the pages of this container, so that it does not
+     * move the focus away from elements outside of the pages. When force is
+     * set, it resets the focus in any case; this is used when navigating to a
+     * hash, which moves the focus just like the browser's default behaviour.
+     *
      * @param targetElement The element to focus, defaults to document.body.
+     * @param force Whether to reset the focus even when there is no actively focused element inside of the pages.
      */
-    _resetFocus(targetElement: HTMLElement | null = document.body): void {
+    _resetFocus(targetElement: HTMLElement | null = document.body, force: boolean = false): void {
         if (!targetElement) return;
+        if (!force && !this._hasActiveFocusInContainer()) return;
+
         const a = (document.createElement('a')) as HTMLAnchorElement;
         a.href = '#';
         a.style.position = 'absolute';
