@@ -1,6 +1,6 @@
 {
   "name": "@depage/magaziner",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": "Frank Hellenkamp <jonas@depage.net> (https://depage.net)",
   "description": "Magazine-style website navigation with page swiping",
   "license": "MIT",
