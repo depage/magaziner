@@ -166,7 +166,7 @@ describe('MagazineNavigator - static: _parsePageContent', () => {
         const result = MagazineNavigator._parsePageContent(html, 'http://example.com/');
         expect(result.meta).toEqual([
             { name: 'description', content: 'A description' },
-            { name: 'og:title', content: 'OG Title' }
+            { property: 'og:title', content: 'OG Title' }
         ]);
     });
 
@@ -799,6 +799,130 @@ describe('MagazineNavigator - _getPageByNumber', () => {
 // ============================================================
 // _getNewPage tests
 // ============================================================
+
+// ============================================================
+// Static method tests: _replaceMeta / _replaceLdjson / _replaceLinks
+// ============================================================
+
+// {{{ 'MagazineNavigator - static: _replaceMeta'
+describe('MagazineNavigator - static: _replaceMeta', () => {
+    beforeEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    afterEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    test('replaces existing meta tags instead of appending', () => {
+        document.head.innerHTML = '<meta name="description" content="old"><meta property="og:title" content="Old OG">';
+
+        MagazineNavigator._replaceMeta([
+            { name: 'description', content: 'new' },
+            { property: 'og:title', content: 'New OG' }
+        ]);
+
+        const descriptions = document.head.querySelectorAll('meta[name="description"]');
+        expect(descriptions.length).toBe(1);
+        expect(descriptions[0].getAttribute('content')).toBe('new');
+
+        const ogTitles = document.head.querySelectorAll('meta[property="og:title"]');
+        expect(ogTitles.length).toBe(1);
+        expect(ogTitles[0].getAttribute('content')).toBe('New OG');
+    });
+
+    test('writes property attributes for property meta tags', () => {
+        MagazineNavigator._replaceMeta([{ property: 'og:image', content: 'http://example.com/img.png' }]);
+
+        const el = document.head.querySelector('meta[property="og:image"]');
+        expect(el).not.toBeNull();
+        expect(el?.getAttribute('name')).toBeNull();
+    });
+
+    test('does not accumulate tags over repeated calls', () => {
+        for (let i = 0; i < 3; i++) {
+            MagazineNavigator._replaceMeta([{ name: 'description', content: `page ${i}` }]);
+        }
+
+        const descriptions = document.head.querySelectorAll('meta[name="description"]');
+        expect(descriptions.length).toBe(1);
+        expect(descriptions[0].getAttribute('content')).toBe('page 2');
+    });
+
+    test('keeps existing meta tags when the page has none', () => {
+        document.head.innerHTML = '<meta name="description" content="keep">';
+
+        MagazineNavigator._replaceMeta([]);
+        MagazineNavigator._replaceMeta(undefined);
+
+        expect(document.head.querySelectorAll('meta[name="description"]').length).toBe(1);
+    });
+
+    test('leaves meta tags without name or property untouched', () => {
+        document.head.innerHTML = '<meta charset="utf-8"><meta http-equiv="refresh" content="5">';
+
+        MagazineNavigator._replaceMeta([{ name: 'description', content: 'new' }]);
+
+        expect(document.head.querySelector('meta[charset]')).not.toBeNull();
+        expect(document.head.querySelector('meta[http-equiv="refresh"]')).not.toBeNull();
+    });
+});
+// }}}
+
+// {{{ 'MagazineNavigator - static: _replaceLdjson'
+describe('MagazineNavigator - static: _replaceLdjson', () => {
+    beforeEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    afterEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    test('replaces existing JSON-LD nodes instead of appending', () => {
+        const old = (document.createElement('script')) as HTMLScriptElement;
+        old.type = 'application/ld+json';
+        old.textContent = '{"old":true}';
+        document.head.appendChild(old);
+
+        const parsed = MagazineNavigator._parsePageContent(
+            '<html><head><script type="application/ld+json">{"new":true}</script></head><body><div class="page">x</div></body></html>',
+            'http://example.com/'
+        );
+        MagazineNavigator._replaceLdjson(parsed.ldjson);
+
+        const scripts = document.head.querySelectorAll("script[type='application/ld+json']");
+        expect(scripts.length).toBe(1);
+        expect(scripts[0].textContent).toBe('{"new":true}');
+    });
+});
+// }}}
+
+// {{{ 'MagazineNavigator - static: _replaceLinks'
+describe('MagazineNavigator - static: _replaceLinks', () => {
+    beforeEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    afterEach(() => {
+        document.head.innerHTML = '';
+    });
+
+    test('replaces existing canonical links instead of appending', () => {
+        document.head.innerHTML = '<link rel="canonical" href="http://example.com/old">';
+
+        const parsed = MagazineNavigator._parsePageContent(
+            '<html><head><link rel="canonical" href="http://example.com/new"></head><body><div class="page">x</div></body></html>',
+            'http://example.com/'
+        );
+        MagazineNavigator._replaceLinks(parsed.links);
+
+        const links = document.head.querySelectorAll("link[rel='canonical']");
+        expect(links.length).toBe(1);
+        expect(links[0].getAttribute('href')).toBe('http://example.com/new');
+    });
+});
+// }}}
 
 // {{{ 'MagazineNavigator - _getNewPage'
 describe('MagazineNavigator - _getNewPage', () => {

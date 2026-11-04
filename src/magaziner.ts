@@ -21,11 +21,17 @@ export interface MagazineOptions {
     wrapAround: boolean;
 }
 
+export interface PageMeta {
+    name?: string;
+    property?: string;
+    content: string;
+}
+
 export interface PageData {
     contentHtml: string;
     classes: string;
     title: string;
-    meta: Array<{ name: string; content: string }>;
+    meta: PageMeta[];
     ldjson: NodeListOf<HTMLScriptElement>;
     links: NodeListOf<HTMLLinkElement>;
     body: HTMLElement;
@@ -36,7 +42,7 @@ interface MagazineNodeData {
     loading: boolean;
     attached: boolean;
     title?: string;
-    meta?: Array<{ name: string; content: string }>;
+    meta?: PageMeta[];
     classes?: string;
     ldjson?: NodeListOf<HTMLScriptElement>;
     links?: NodeListOf<HTMLLinkElement>;
@@ -164,7 +170,12 @@ class MagazineNavigator {
             contentHtml: (page as HTMLElement).innerHTML,
             classes: bodyClasses,
             title,
-            meta: Array.from(metaTags).map(m => ({ name: (m.getAttribute('name') || m.getAttribute('property')) || '', content: m.getAttribute('content') || '' })),
+            meta: Array.from(metaTags).map((m) => {
+                const name = m.getAttribute('name');
+                const property = m.getAttribute('property');
+                const content = m.getAttribute('content') || '';
+                return name ? { name, content } : { property: property || '', content };
+            }),
             ldjson,
             links,
             body
@@ -547,6 +558,76 @@ class MagazineNavigator {
     }
     // }}}
 
+    // {{{ _replaceMeta
+    /**
+     * This function replaces all meta tags with name or property attributes in
+     * the document head with the meta tags of the current page.
+     *
+     * @param meta The meta tags of the page.
+     */
+    static _replaceMeta(meta?: PageMeta[]): void {
+        if (!meta || meta.length === 0) return;
+
+        const head = document.head;
+        head.querySelectorAll("meta[name], meta[property]").forEach(el => el.remove());
+
+        meta.forEach(m => {
+            const metaEl = (document.createElement('meta')) as HTMLMetaElement;
+            if (m.name) metaEl.setAttribute('name', m.name);
+            if (m.property) metaEl.setAttribute('property', m.property);
+            metaEl.setAttribute('content', m.content);
+            head.appendChild(metaEl);
+        });
+    }
+    // }}}
+
+    // {{{ _replaceLdjson
+    /**
+     * This function replaces all JSON-LD script nodes in the document head with
+     * the JSON-LD script nodes of the current page.
+     *
+     * @param ldjson The JSON-LD script nodes of the page.
+     */
+    static _replaceLdjson(ldjson?: NodeListOf<HTMLScriptElement>): void {
+        if (!ldjson || ldjson.length === 0) return;
+
+        const head = document.head;
+        head.querySelectorAll("script[type='application/ld+json']").forEach(el => el.remove());
+
+        ldjson.forEach(s => {
+            const scriptEl = (document.createElement('script')) as HTMLScriptElement;
+            scriptEl.type = 'application/ld+json';
+            scriptEl.textContent = s.textContent;
+            head.appendChild(scriptEl);
+        });
+    }
+    // }}}
+
+    // {{{ _replaceLinks
+    /**
+     * This function replaces all canonical, alternate and icon link nodes in the
+     * document head with the link nodes of the current page.
+     *
+     * @param links The link nodes of the page.
+     */
+    static _replaceLinks(links?: NodeListOf<HTMLLinkElement>): void {
+        if (!links || links.length === 0) return;
+
+        const head = document.head;
+        head.querySelectorAll("link[rel='canonical'], link[rel='alternate'], link[rel='icon']").forEach(el => el.remove());
+
+        links.forEach(l => {
+            const linkEl = (document.createElement('link')) as HTMLLinkElement;
+            for (let i = 0; i < (l as Element).attributes.length; i++) {
+                const attr = (l as Element).attributes[i];
+                if (attr.name === 'class') continue;
+                linkEl.setAttribute(attr.name, attr.value);
+            }
+            head.appendChild(linkEl);
+        });
+    }
+    // }}}
+
     // {{{ _registerStateChangeCompleteEvent
     /**
      * This function registers a handler for state change completion to update page metadata.
@@ -558,9 +639,6 @@ class MagazineNavigator {
             const { url, page } = detail || { url: '', page: undefined };
 
             const title = (page?.__magaziner?.title) || '';
-            const meta = (page?.__magaziner?.meta) || [] as unknown as Array<{ name: string; content: string }>;
-            const ldjson = (page?.__magaziner?.ldjson) || [] as unknown as NodeListOf<HTMLScriptElement>;
-            const links = (page?.__magaziner?.links) || [] as unknown as NodeListOf<HTMLLinkElement>;
 
             if (title) {
                 document.title = title;
@@ -570,39 +648,9 @@ class MagazineNavigator {
                 } catch (err) { }
             }
 
-            const head = document.head;
-            if (meta.length > 0) {
-                (head.querySelectorAll("meta[name], meta[property]")) as NodeListOf<HTMLMetaElement>;
-                meta.forEach(m => {
-                    const metaEl = (document.createElement('meta')) as HTMLMetaElement;
-                    metaEl.setAttribute("name", m.name);
-                    metaEl.setAttribute("content", m.content);
-                    head.appendChild(metaEl);
-                });
-            }
-
-            if (ldjson.length > 0) {
-                (head.querySelectorAll("script[type='application/ld+json']")) as NodeListOf<HTMLScriptElement>;
-                ldjson.forEach(s => {
-                    const scriptEl = (document.createElement('script')) as HTMLScriptElement;
-                    scriptEl.type = 'application/ld+json';
-                    scriptEl.textContent = s.textContent;
-                    head.appendChild(scriptEl);
-                });
-            }
-
-            if (links.length > 0) {
-                (head.querySelectorAll("link[rel='canonical'], link[rel='alternate'], link[rel='icon']")) as NodeListOf<HTMLLinkElement>;
-                links.forEach(l => {
-                    const linkEl = (document.createElement('link')) as HTMLLinkElement;
-                    for (let i = 0; i < (l as Element).attributes.length; i++) {
-                        const attr = (l as Element).attributes[i];
-                        if (attr.name === 'class') continue;
-                        linkEl.setAttribute(attr.name, attr.value);
-                    }
-                    head.appendChild(linkEl);
-                });
-            }
+            MagazineNavigator._replaceMeta(page?.__magaziner?.meta);
+            MagazineNavigator._replaceLdjson(page?.__magaziner?.ldjson);
+            MagazineNavigator._replaceLinks(page?.__magaziner?.links);
 
             if (page?.__magaziner?.classes) {
                 document.querySelector('body')?.setAttribute('class', (page as HtmlElementWithMagaziner).__magaziner.classes);

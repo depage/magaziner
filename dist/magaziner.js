@@ -105,10 +105,18 @@ var MagazineNavigator = class MagazineNavigator {
 			contentHtml: page.innerHTML,
 			classes: bodyClasses,
 			title,
-			meta: Array.from(metaTags).map((m) => ({
-				name: m.getAttribute("name") || m.getAttribute("property") || "",
-				content: m.getAttribute("content") || ""
-			})),
+			meta: Array.from(metaTags).map((m) => {
+				const name = m.getAttribute("name");
+				const property = m.getAttribute("property");
+				const content = m.getAttribute("content") || "";
+				return name ? {
+					name,
+					content
+				} : {
+					property: property || "",
+					content
+				};
+			}),
 			ldjson,
 			links,
 			body
@@ -359,6 +367,61 @@ var MagazineNavigator = class MagazineNavigator {
 		});
 	}
 	/**
+	* This function replaces all meta tags with name or property attributes in
+	* the document head with the meta tags of the current page.
+	*
+	* @param meta The meta tags of the page.
+	*/
+	static _replaceMeta(meta) {
+		if (!meta || meta.length === 0) return;
+		const head = document.head;
+		head.querySelectorAll("meta[name], meta[property]").forEach((el) => el.remove());
+		meta.forEach((m) => {
+			const metaEl = document.createElement("meta");
+			if (m.name) metaEl.setAttribute("name", m.name);
+			if (m.property) metaEl.setAttribute("property", m.property);
+			metaEl.setAttribute("content", m.content);
+			head.appendChild(metaEl);
+		});
+	}
+	/**
+	* This function replaces all JSON-LD script nodes in the document head with
+	* the JSON-LD script nodes of the current page.
+	*
+	* @param ldjson The JSON-LD script nodes of the page.
+	*/
+	static _replaceLdjson(ldjson) {
+		if (!ldjson || ldjson.length === 0) return;
+		const head = document.head;
+		head.querySelectorAll("script[type='application/ld+json']").forEach((el) => el.remove());
+		ldjson.forEach((s) => {
+			const scriptEl = document.createElement("script");
+			scriptEl.type = "application/ld+json";
+			scriptEl.textContent = s.textContent;
+			head.appendChild(scriptEl);
+		});
+	}
+	/**
+	* This function replaces all canonical, alternate and icon link nodes in the
+	* document head with the link nodes of the current page.
+	*
+	* @param links The link nodes of the page.
+	*/
+	static _replaceLinks(links) {
+		if (!links || links.length === 0) return;
+		const head = document.head;
+		head.querySelectorAll("link[rel='canonical'], link[rel='alternate'], link[rel='icon']").forEach((el) => el.remove());
+		links.forEach((l) => {
+			const linkEl = document.createElement("link");
+			for (let i = 0; i < l.attributes.length; i++) {
+				const attr = l.attributes[i];
+				if (attr.name === "class") continue;
+				linkEl.setAttribute(attr.name, attr.value);
+			}
+			head.appendChild(linkEl);
+		});
+	}
+	/**
 	* This function registers a handler for state change completion to update page metadata.
 	*/
 	_registerStateChangeCompleteEvent() {
@@ -369,9 +432,6 @@ var MagazineNavigator = class MagazineNavigator {
 				page: void 0
 			};
 			const title = page?.__magaziner?.title || "";
-			const meta = page?.__magaziner?.meta || [];
-			const ldjson = page?.__magaziner?.ldjson || [];
-			const links = page?.__magaziner?.links || [];
 			if (title) {
 				document.title = title;
 				try {
@@ -379,37 +439,9 @@ var MagazineNavigator = class MagazineNavigator {
 					if (titleEl) titleEl.innerHTML = document.title.replace("<", "&lt;").replace(">", "&gt;").replace(" & ", " &amp; ");
 				} catch (err) {}
 			}
-			const head = document.head;
-			if (meta.length > 0) {
-				head.querySelectorAll("meta[name], meta[property]");
-				meta.forEach((m) => {
-					const metaEl = document.createElement("meta");
-					metaEl.setAttribute("name", m.name);
-					metaEl.setAttribute("content", m.content);
-					head.appendChild(metaEl);
-				});
-			}
-			if (ldjson.length > 0) {
-				head.querySelectorAll("script[type='application/ld+json']");
-				ldjson.forEach((s) => {
-					const scriptEl = document.createElement("script");
-					scriptEl.type = "application/ld+json";
-					scriptEl.textContent = s.textContent;
-					head.appendChild(scriptEl);
-				});
-			}
-			if (links.length > 0) {
-				head.querySelectorAll("link[rel='canonical'], link[rel='alternate'], link[rel='icon']");
-				links.forEach((l) => {
-					const linkEl = document.createElement("link");
-					for (let i = 0; i < l.attributes.length; i++) {
-						const attr = l.attributes[i];
-						if (attr.name === "class") continue;
-						linkEl.setAttribute(attr.name, attr.value);
-					}
-					head.appendChild(linkEl);
-				});
-			}
+			MagazineNavigator._replaceMeta(page?.__magaziner?.meta);
+			MagazineNavigator._replaceLdjson(page?.__magaziner?.ldjson);
+			MagazineNavigator._replaceLinks(page?.__magaziner?.links);
 			if (page?.__magaziner?.classes) document.querySelector("body")?.setAttribute("class", page.__magaziner.classes);
 			this._initPageLinks();
 			if (typeof window._paq !== "undefined") {

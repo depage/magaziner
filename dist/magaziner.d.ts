@@ -6,14 +6,16 @@ export interface MagazineOptions {
     touchNavigation: boolean;
     wrapAround: boolean;
 }
+export interface PageMeta {
+    name?: string;
+    property?: string;
+    content: string;
+}
 export interface PageData {
     contentHtml: string;
     classes: string;
     title: string;
-    meta: Array<{
-        name: string;
-        content: string;
-    }>;
+    meta: PageMeta[];
     ldjson: NodeListOf<HTMLScriptElement>;
     links: NodeListOf<HTMLLinkElement>;
     body: HTMLElement;
@@ -23,10 +25,7 @@ interface MagazineNodeData {
     loading: boolean;
     attached: boolean;
     title?: string;
-    meta?: Array<{
-        name: string;
-        content: string;
-    }>;
+    meta?: PageMeta[];
     classes?: string;
     ldjson?: NodeListOf<HTMLScriptElement>;
     links?: NodeListOf<HTMLLinkElement>;
@@ -157,6 +156,27 @@ declare class MagazineNavigator {
      * This function registers a browser back/forward (popstate) event handler.
      */
     _registerPopStateEvent(): void;
+    /**
+     * This function replaces all meta tags with name or property attributes in
+     * the document head with the meta tags of the current page.
+     *
+     * @param meta The meta tags of the page.
+     */
+    static _replaceMeta(meta?: PageMeta[]): void;
+    /**
+     * This function replaces all JSON-LD script nodes in the document head with
+     * the JSON-LD script nodes of the current page.
+     *
+     * @param ldjson The JSON-LD script nodes of the page.
+     */
+    static _replaceLdjson(ldjson?: NodeListOf<HTMLScriptElement>): void;
+    /**
+     * This function replaces all canonical, alternate and icon link nodes in the
+     * document head with the link nodes of the current page.
+     *
+     * @param links The link nodes of the page.
+     */
+    static _replaceLinks(links?: NodeListOf<HTMLLinkElement>): void;
     /**
      * This function registers a handler for state change completion to update page metadata.
      */
